@@ -1,0 +1,74 @@
+:root {
+  --text-color: #370800;
+  --background-color: #FCD7AF;
+}
+
+@font-face {
+	font-family: "Fax Nouveau";
+	src: url("./FaxNouveau-Regular.ttf") format("truetype");
+}
+
+body {
+	background-color: var(--background-color);
+	margin: 0 auto;
+	max-width: 600px;
+	padding-left: 20px;
+	padding-right: 20px;
+}
+
+h2, h3, h4, h5, h6{
+	color: var(--text-color);
+	font-family: monospace;
+}
+
+h1 {
+	color: var(--text-color);
+	font-family: Fax Nouveau;
+	font-size: 40px;
+}
+
+h1 {
+	width: max-content;
+	width: -moz-max-content;
+	width: -webkit-max-content;
+	width: intrinsic;
+	border: 1px solid black;
+	padding: 5px;
+	padding-right: 10px;
+	box-shadow: -10px 10px var(--text-color);
+	margin-bottom: 30px;
+}
+
+nav li {
+	display : inline;
+}
+
+nav li:first-child::after {
+	content: " / { ";
+}
+
+nav li:not(:first-child):not(:last-child)::after {
+	content: " , ";
+}
+
+nav li:last-child::after {
+	content: " }.html";
+}
+
+nav ul {
+	padding: 0px;
+	font: 18px monospace;
+}
+
+#quotes li {
+	list-style-type: none;
+}
+
+#quotes figure {
+	margin: 0px;
+}
+
+#quotes figcaption::before {
+	content: "-";
+}
+
