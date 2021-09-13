@@ -13,7 +13,7 @@ ALL= \
 	graphics.html \
 	me.html
 
-DHALL=dhall $(DHALL_FLAGS)
+DHALL?=dhall $(DHALL_FLAGS)
 
 .PHONY: all
 all: $(ALL)

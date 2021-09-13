@@ -2,7 +2,7 @@ let Prelude = https://raw.githubusercontent.com/dhall-lang/dhall-lang/v20.2.0/Pr
 -- let XML = Prelude.XML.Type
 let XML = https://raw.githubusercontent.com/ear7h/dhall-lang/issue-1224-raw-xml/Prelude/XML/package.dhall
 let XML = XML.Type
-let H = ./../dhall-html/html.dhall
+let H = https://raw.githubusercontent.com/ear7h/dhall-html/main/html.dhall
 let List/map = Prelude.List.map
 let root = env:ROOT as Text
 
