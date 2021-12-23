@@ -2,3 +2,5 @@
 *.txt
 **.html
 !**.content.html
+build
+.*.swp

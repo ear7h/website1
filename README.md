@@ -10,5 +10,8 @@ make a more in-depth blog post about it.
 The command to run this in "production" is:
 
 ```
-DHALL=~/bin/dhall ROOT=/~julio/ make all
+ROOT=/~julio/ buildsys3
 ```
+
+## TODO
+* Use only a single dhall implementation
