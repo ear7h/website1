@@ -1,0 +1,101 @@
+<h1 id="gsoc-2021-work-product-submission">GSoC 2021 Work Product Submission</h1>
+<p>For Google Summer of Code 2021 I worked on the Dhall language, implementing bidirectional conversion between Dhall and TOML. I was able to implement the following features:</p>
+<ul>
+<li>conversion from Dhall to TOML, as a library function and CLI</li>
+<li>conversion from TOML to Dhall, as a library function and CLI</li>
+<li>documentation of packages</li>
+</ul>
+<p>However, there are some missing features:</p>
+<ul>
+<li>Command line flags for the CLIs</li>
+<li>Date/Time support</li>
+<li>Schema inference in TOML to Dhall</li>
+<li>Alternative methods of handling unions.</li>
+</ul>
+<p>For a list of commits, you can use this link:</p>
+<p><a href="https://github.com/search?q=committer-date%3A%3C2021-08-17+author%3Aear7h+org%3Adhall-lang&amp;type=Commits">https://github.com/search?q=committer-date%3A%3C2021-08-17+author%3Aear7h+org%3Adhall-lang&amp;type=Commits</a></p>
+<p>And to download a binary look for <code>dhall-toml</code> in this release page:</p>
+<p><a href="https://github.com/dhall-lang/dhall-haskell/releases/tag/1.40.0">https://github.com/dhall-lang/dhall-haskell/releases/tag/1.40.0</a></p>
+<h2 id="dhall-to-toml">Dhall to TOML</h2>
+<p>I started with the Dhall to TOML conversion. The types in a, normalized, Dhall abstract syntax tree (AST) are unambiguous and correct, thus can simply be converted to TOML syntax (in contrast with TOML to Dhall, which I'll get to later). The implementation revolves around the following function:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ot">toToml ::</span> <span class="dt">TOML</span> <span class="ot">-&gt;</span> <span class="dt">Key</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> <span class="dt">Void</span> <span class="dt">Void</span> <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">CompileError</span> <span class="dt">TOML</span></span></code></pre></div>
+<p>This function takes a TOML object, a TOML key, a Dhall expression, and returns either an error or a new TOML object. In imperative terms, this function converts a Dhall expression to a TOML value and adds the the key-value pair to a TOML object.</p>
+<p>Primitive values, such as booleans and numbers are relatively simple to handle. <code>tomland</code> has a function <code>Toml.TOML.insertKeyVal</code> to insert primitives into a TOML object.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ot">insertKeyVal ::</span> <span class="dt">Key</span> <span class="ot">-&gt;</span> <span class="dt">Value</span> a <span class="ot">-&gt;</span> <span class="dt">TOML</span> <span class="ot">-&gt;</span> <span class="dt">TOML</span></span></code></pre></div>
+<p>Composite types like lists and objects are slightly more difficult. In particular, they require that <code>toToml</code> is called recursively on all the child nodes (list elements or object fields). This logic is a little complicated in order to improve the output's readability. For example map keys are compressed, so instead of:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode toml"><code class="sourceCode toml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[</span><span class="dt">a</span><span class="kw">]</span> <span class="co"># bad</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">[</span><span class="dt">b</span><span class="kw">]</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">c</span> <span class="op">=</span> <span class="dv">1</span></span></code></pre></div>
+<p>we get:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode toml"><code class="sourceCode toml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[</span><span class="dt">a</span><span class="kw">.</span><span class="dt">b</span><span class="kw">]</span> <span class="co"># good</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">c</span> <span class="op">=</span> <span class="dv">1</span></span></code></pre></div>
+<p>Also, table arrays are created whenever possible, so instead of:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode toml"><code class="sourceCode toml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="dt">a</span> <span class="op">=</span> <span class="op">[</span><span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">3</span><span class="op">]</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="dt">b</span> <span class="op">=</span> <span class="op">[{</span><span class="dt">i</span><span class="op"> =</span> <span class="dv">1</span><span class="op">},</span> <span class="op">{</span><span class="dt">i</span><span class="op"> =</span> <span class="dv">2</span><span class="op">}]</span> <span class="co"># bad</span></span></code></pre></div>
+<p>we get:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode toml"><code class="sourceCode toml"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dt">a</span> <span class="op">=</span> <span class="op">[</span><span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">3</span><span class="op">]</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">[[</span><span class="dt">b</span><span class="kw">]]</span> <span class="co"># good</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="dt">i</span> <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="kw">[[</span><span class="dt">b</span><span class="kw">]]</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="dt">i</span> <span class="op">=</span> <span class="dv">2</span></span></code></pre></div>
+<h2 id="toml-to-dhall">Toml to Dhall</h2>
+<p>As I mentioned above, TOML to Dhall conversion is a little more difficult, since Dhall requires that all types are known in order to build an AST. One approach is to naively infer types from the TOML AST. However, this approach would fail in the relatively common case of a list of unions, which might be represented as a heterogeneous list in TOML (ex. <code>[1, true]</code>). In order to handle this, a non-trivial inference mechanism is needed.</p>
+<p>Instead, we have the user provide a Dhall type to be used as a "schema" when converting from TOML. This implemented with a function that looks <em>almost</em> like:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ot">toDhall ::</span> <span class="dt">Expr</span> <span class="dt">Src</span> <span class="dt">Void</span> <span class="ot">-&gt;</span> <span class="dt">TOML</span> <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">CompileError</span> (<span class="dt">Expr</span> <span class="dt">Src</span> <span class="dt">Void</span>)</span></code></pre></div>
+<p>This function takes a Dhall expression (the schema, types are also expressions in Dhall) and a part of the TOML syntax tree to convert. It returns either an error or the TOML AST converted into a Dhall AST.</p>
+<p>The actual function is slightly different due to some quirks of the upstream library, <code>tomland</code>. In particular it doesn't have a recursive structure, instead it keeps lone pairs, tables, and table arrays stored separately. This is difficult to work with so I created an intermediate object that can be traversed easily:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Object</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="ot">=</span> <span class="dt">Prim</span> <span class="dt">Toml.AnyValue.AnyValue</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="dt">Array</span> [<span class="dt">Object</span>]</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="dt">Table</span> (<span class="dt">HashMap.HashMap</span> <span class="dt">Piece</span> <span class="dt">Object</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="dt">Invalid</span></span></code></pre></div>
+<p>So, <code>toDhall</code> is actually:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ot">toDhall ::</span> <span class="dt">Expr</span> <span class="dt">Src</span> <span class="dt">Void</span> <span class="ot">-&gt;</span> <span class="dt">Object</span> <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">CompileError</span> (<span class="dt">Expr</span> <span class="dt">Src</span> <span class="dt">Void</span>)</span></code></pre></div>
+<p>And we have another function to convert a <code>TOML</code> to an <code>Object</code>:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ot">tomlToObject ::</span> <span class="dt">TOML</span> <span class="ot">-&gt;</span> <span class="dt">Object</span></span></code></pre></div>
+<p><code>toDhall</code> is strucutured similarly to <code>toToml</code>: the primitive values are trivial, while composite types require recursion. One major difference is that bothe the <code>Expr</code> and the <code>Object</code> need to be compatible. So, pattern matching happens on both arguments at the same time like:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode hs"><code class="sourceCode haskell"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>toDhall exprType value <span class="ot">=</span> <span class="kw">case</span> (exprType, value) <span class="kw">of</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    (<span class="dt">Core.Bool</span>, <span class="dt">Prim</span> (<span class="dt">AnyValue</span> <span class="dt">Value.Bool</span> a)) <span class="ot">-&gt;</span> <span class="op">...</span></span></code></pre></div>
+<p>Otherwise, this function is simpler than <code>toDhall</code> with no special cases for formatting since the Dhall already has pretty printing that can improve a program's syntax without changing its semantics.</p>
+<h2 id="bugs-and-improvements">Bugs and improvements</h2>
+<ul>
+<li>Command line flags for the CLIs</li>
+<li>Date/Time support</li>
+<li>Schema inference in TOML to Dhall</li>
+<li>Alternative methods of handling unions.</li>
+</ul>
+<p>I was not able to make a polished product that matched the other CLIs in the <code>dhall-haskell</code> repository during the coding period. However, I do plan on continuing to contribute to Dhall since I am genuinely interested in its concepts. Here's a brief summary of future work that could be done:</p>
+<ul>
+<li>Command line flags for the CLIs
+<ul>
+<li>This is particularly important for usability, at least implementing a help message will provide a better experience to users who are less familiar with Dhall or Unix in general.</li>
+</ul></li>
+<li>Date/Time support
+<ul>
+<li>Dhall recently implemented native support for dates and time, particularly to support TOML.</li>
+</ul></li>
+<li>Schema inference in TOML to Dhall
+<ul>
+<li>This feature would improve the user experience allowing most arbitrary TOML files to be converted to Dhall without having write a schema.</li>
+</ul></li>
+<li>Alternative methods of handling unions.
+<ul>
+<li>In <code>dhall-to-toml</code> union values are converted to the underlying value or the name of the variant if it's bare (ex. given <code>&lt;A : X | B&gt;</code> it would be the <code>X</code> or <code>"B"</code>). Users may, instead, want a record with <code>type</code> and <code>value</code> fields which contain the alternative's name and value respectively.</li>
+<li>In <code>toml-to-dhall</code> when a union is encountered in the schema, the first variant that can be successfully created from the TOML value is returned (if none are successful, an error is returned). We may want to support a converting from similar scheme as above where the TOML table has <code>type</code> and <code>value</code> fields which contain the alternative's name and value respectively.</li>
+</ul></li>
+</ul>
+<p>There are also some limitations due to the upstream library, which have been documented in the user facing documentation:</p>
+<ul>
+<li>heterogeneous arrays, which were added in the recent v1.0 release of the TOML spec (<a href="https://github.com/kowainik/tomland/issues/373">https://github.com/kowainik/tomland/issues/373</a>)</li>
+<li>arrays of arrays of objects do not parse and are not representable in the TOML AST (<a href="https://github.com/kowainik/tomland/issues/385">https://github.com/kowainik/tomland/issues/385</a>)</li>
+</ul>
+<h2 id="impact">Impact</h2>
+<p>TOML, stands for Tom's Obvious Minimal Language, and besides being obvious it is also easily read by humans. However, at scale, nice syntax alone cannot solve readability issues. Take for example this TOML file which configures the Tegola vector tile server:</p>
+<p><a href="https://github.com/go-spatial/tegola-osm/blob/master/tegola-natural-earth.toml">https://github.com/go-spatial/tegola-osm/blob/master/tegola-natural-earth.toml</a></p>
+<p>At over 800 lines debugging and refactoring would be quite painful. Note that many of the tables follow a pattern. To demonstrate the benefits of Dhall for this task I created a Dhall file that generates a similar configuration for Tegola in about 300 lines:</p>
+<p><a href="https://github.com/ear7h/dhall-natural-earth/blob/main/ne.dhall">https://github.com/ear7h/dhall-natural-earth/blob/main/ne.dhall</a></p>
+<p>Adding TOML support Dhall, not only expands the Dhall user base, but also allows TOML-using services to be both beginner friendly at small scales and maintainable at large scales.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>I'd like to thank my mentors Gabriella Gonzalez and Simon Jakobi for their time and functional programming wisdom. Their welcoming environment has also motivated me to contribute more to Dhall. I'm hoping to further polish the <code>dhall-toml</code> package, adding some of the missing features mentioned above. Thank you, again!</p>

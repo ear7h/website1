@@ -1,6 +1,5 @@
 .history
 *.txt
-**.html
-!**.content.html
 build
 .*.swp
+cache

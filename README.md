@@ -10,7 +10,7 @@ make a more in-depth blog post about it.
 The command to run this in "production" is:
 
 ```
-ROOT=/~julio/ buildsys3
+ROOT=/~julio/ BUILD_DIR=~/public/html buildsys3
 ```
 
 ## TODO

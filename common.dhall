@@ -44,16 +44,21 @@ let mkDoc = \(title : Text) ->
 		, H.body H.noattr (nav # body)
 		])
 
+let PostFormat = < html | md >
 let Post =
 	{ date : Text
-	, title : Text
-	, content : List XML
+	, linkTitle : Text
+	, format : PostFormat
 	}
 
-let renderPost = \(p : Post) -> mkDoc p.title
-  ([ H.h1 H.noattr [ H.text p.title ]
-  , H.p H.noattr [ H.text ("created: " ++ p.date) ]
-  ] # p.content)
+let renderPost = \(p :
+  { date : Text
+  , title : Text
+  , content : Text
+  }) -> mkDoc p.title
+  [ H.p H.noattr [ H.text ("created: " ++ p.date) ]
+  , H.rawText p.content
+  ]
 
 in
   { Prelude
@@ -67,4 +72,6 @@ in
 
   , Post
   , renderPost
+
+  , PostFormat
   }
