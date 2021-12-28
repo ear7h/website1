@@ -15,6 +15,11 @@ let mkPostLink = \(p : C.Post) ->
 let F = C.PostFormat
 let list =
   [
+    { date = "2021-12-27"
+    , linkTitle = "buildsys3"
+    , format = F.md
+    }
+  ,
     { date = "2021-12-01"
     , linkTitle = "cse167-final"
     , format = F.md
@@ -23,21 +28,6 @@ let list =
     { date = "2021-08-17"
     , linkTitle = "gsoc-final"
     , format = F.md
-    }
-  ,
-    { date = "2021-06-07"
-    , linkTitle = "slack-vs-discord"
-    , format = F.html
-    }
-  ,
-    { date = "2021-06-07"
-    , linkTitle = "algebra"
-    , format = F.html
-    }
-  ,
-    { date = "2021-06-02"
-    , linkTitle = "hello-world"
-    , format = F.html
     }
   ]
 
