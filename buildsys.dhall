@@ -4,7 +4,7 @@ let L = ./common.dhall
 let Prelude =  https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.1.0/Prelude/package.dhall
 let List/map = Prelude.List.map
 
-let BUILD_DIR = env:BUILD_DIR ? "build/"
+let BUILD_DIR = env:BUILD_DIR as Text ? "build/"
 let CACHE_DIR = "cache/"
 let DHALL = "dhall"
 
@@ -26,7 +26,7 @@ let mkMain
     }
 
 let mainPages = List/map Text B.Item mkMain
-  [ "index", "projects", "graphics", "me" ]
+  [ "index", "projects", "graphics", "me", "404" ]
 
 let blogPosts =
   let html = λ(x : { date : Text, linkTitle : Text} ) →
@@ -117,6 +117,15 @@ let extraDirs =
     , cache "posts"
     ]
 
+let mkdir = \(p : Text) -> 
+  { item = B.generated
+    { results = [ BUILD_DIR ++ p]
+    , command = cmd "mkdir" [ BUILD_DIR ++ p]
+    , prereqs = [] : List B.Item
+    }
+  , path = BUILD_DIR ++ p
+  }
+
 let resources =
   let cp = λ(p : Text) → B.generated
     { results = [ BUILD_DIR ++ p ]
@@ -130,10 +139,24 @@ let resources =
     , "style.css"
     ]
 
+let uncategorized =
+  let dir = mkdir "uncategorized/"
+  let f = \(p : Text) -> 
+    let input = "uncategorized/" ++ p
+    let output = dir.path ++ p
+    in B.generated
+      { results = [ output ]
+      , command = cmd "cp" [ input, output ]
+      , prereqs = [ B.source input ]
+      }
+  in [ dir.item ] # (List/map Text B.Item f
+    [ "cgs100a-zine.pdf"
+    ])
+
 let all = B.generated
   { results = [] : List Text
   , command = cmd "echo" [ "done" ]
-  , prereqs = extraDirs # [ posts ] # mainPages # resources
+  , prereqs = extraDirs # [ posts ] # mainPages # resources # uncategorized
   }
 
 in
@@ -148,7 +171,7 @@ in
     })
   , clean = B.build (B.generated
     { results = [] : List Text
-    , command = cmd "rm" [ "-rf", "build", "cache" ]
+    , command = cmd "rm" [ "-rf", BUILD_DIR, CACHE_DIR ]
     , prereqs = [] : List B.Item
     })
   }
